@@ -48,7 +48,6 @@ public class Play implements Screen {
 	private final int VELOCITY_ITERATIONS = 8, POSITION_ITERATIONS = 3;
 	
 	private Player player;
-	private ControlEnemy controlenemy;
 	private LinkedList<Enemy> enemies;
 	public LinkedList<Bullet> bullets;
 	
@@ -71,9 +70,15 @@ public class Play implements Screen {
 		
 		//-----
 		player.update();//Update our entities
-		controlenemy.update();
+		
+		Enemy[] tempEnemies = enemies.toArray(new Enemy[enemies.size()]);
+		
 		for(Enemy e: enemies){
 			e.update();
+			if(e.getHealth() < 1){
+				enemies.remove(e);
+				world.destroyBody(e.getBody());
+			}
 		}
 		
 		if(Gdx.input.isKeyPressed(Keys.NUM_1)){
@@ -88,8 +93,8 @@ public class Play implements Screen {
 		
 		bullets = player.getBullets();
 		
-		Bullet[] shit = bullets.toArray(new Bullet[bullets.size()]);
-		for(Bullet b: shit){
+		Bullet[] tempBullets = bullets.toArray(new Bullet[bullets.size()]);
+		for(Bullet b: tempBullets){
 			b.update();
 			if(b.getDestroy() == true){
 				bullets.remove(b);
@@ -114,6 +119,7 @@ public class Play implements Screen {
 			findPath2(e);
 			printPath(e);
 		}
+		
 		batch.setProjectionMatrix(worldCamera.combined);
 		batch.begin();
 		world.getBodies(tmpBodies);
@@ -210,7 +216,6 @@ public class Play implements Screen {
 		
 		
 		player = new Player(world, 10f, 3f, .5f); //Init objects
-		controlenemy = new ControlEnemy(world, 10f, 10f, .5f);
 
 		
 		Gdx.input.setInputProcessor(new InputMultiplexer(new InputAdapter(){ //Combine the inputs of all our items
@@ -242,7 +247,7 @@ public class Play implements Screen {
 				return true;
 			}
 			
-		}, player, controlenemy));
+		}, player));
 		
 		//--------------------
 

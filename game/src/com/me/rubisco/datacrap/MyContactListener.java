@@ -16,7 +16,8 @@ public class MyContactListener implements ContactListener {
 		Object contactB = contact.getFixtureB().getBody().getUserData();
 		
 		if(contactA instanceof Player && contactB instanceof Enemy){
-			
+			Enemy enemy = (Enemy) contactB;
+			enemy.setFindPath(true);
 		}
 		
 		if(contactA instanceof Bullet && !contact.getFixtureB().isSensor()){
@@ -35,7 +36,13 @@ public class MyContactListener implements ContactListener {
 
 	@Override
 	public void endContact(Contact contact) {
+		Object contactA = contact.getFixtureA().getBody().getUserData();
+		Object contactB = contact.getFixtureB().getBody().getUserData();
 		
+		if(contactA instanceof Player && contactB instanceof Enemy){
+			Enemy enemy = (Enemy) contactB;
+			enemy.setFindPath(false);
+		}
 	}
 
 	@Override

@@ -24,6 +24,7 @@ public class Enemy{
 	private Vector2 velocity = new Vector2();
 	private float movementForce = 10;
 	int HEALTH = 20;
+	boolean findPath = false;
 	
 	Stack<Vector2> path;
 	
@@ -68,10 +69,14 @@ public class Enemy{
 	
 	public void findPath(Vector2 target, int[][] map){
 		Pathfinder pathfinder = new Pathfinder();
-			
-		if(false){
+		//System.out.println(findPath);
+		if(findPath){
 			path = pathfinder.findPath(body.getPosition(), target, map);
 		}
+	}
+	
+	public void setFindPath(boolean findPath){
+		this.findPath = findPath;
 	}
 	
 	public Stack<Vector2> getPath(){
