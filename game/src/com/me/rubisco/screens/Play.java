@@ -32,9 +32,9 @@ import com.badlogic.gdx.physics.box2d.World;
 import com.badlogic.gdx.utils.Array;
 import com.me.rubisco.datacrap.MyContactListener;
 import com.me.rubisco.models.Bullet;
-import com.me.rubisco.models.ControlEnemy;
 import com.me.rubisco.models.Enemy;
 import com.me.rubisco.models.Player;
+import com.me.rubisco.models.Wall;
 
 public class Play implements Screen {
 
@@ -271,19 +271,10 @@ public class Play implements Screen {
 
 					//Create a new static body at the tile place
 					//**Could init defs outside of loop to save some mem***
-					BodyDef testDef = new BodyDef();
-					testDef.type = BodyType.StaticBody;
-					testDef.position.set(x ,y);
-					
-					PolygonShape testShape = new PolygonShape();
-					testShape.setAsBox(.5f, .5f);
 					
 					
-					Body testBody = world.createBody(testDef);
-					testBody.createFixture(testShape, 0);		
+					Wall wall = new Wall(world, x, y, .5f);
 					
-					
-					testShape.dispose();
 					}catch(NullPointerException e){
 					arrMap[x][y] = 0;
 				}

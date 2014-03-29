@@ -80,7 +80,7 @@ public class Pathfinder {
 			toPath = toPath.getParent();
 		}
 		
-		pathNode.add(start);
+		//pathNode.add(start);
 		
 		//Collections.reverse(pathNode);
 		

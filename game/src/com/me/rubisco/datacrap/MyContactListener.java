@@ -29,15 +29,27 @@ public class MyContactListener implements ContactListener {
 				((Bullet) contactB).setDestory(true);
 			
 			if(contactA instanceof Enemy){
-				((Enemy) contactA).setHealth(((Enemy) contactA).getHealth()-((Bullet) contactB).getDamage());
+				((Enemy) contactA).decrementHealth(((Bullet) contactB).getDamage());
 			}
 		}
 	}
 
 	@Override
 	public void endContact(Contact contact) {
-		Object contactA = contact.getFixtureA().getBody().getUserData();
-		Object contactB = contact.getFixtureB().getBody().getUserData();
+		Object contactA;
+		Object contactB;
+		
+		try{
+			contactA = contact.getFixtureA().getBody().getUserData();
+		}catch(NullPointerException e){
+			contactA = "nope";
+		}
+		
+		try{
+			contactB = contact.getFixtureB().getBody().getUserData();
+		}catch(NullPointerException e){
+			contactB = "nope";
+		}
 		
 		if(contactA instanceof Player && contactB instanceof Enemy){
 			Enemy enemy = (Enemy) contactB;

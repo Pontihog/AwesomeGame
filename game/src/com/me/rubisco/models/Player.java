@@ -32,6 +32,7 @@ public class Player extends InputAdapter{
 	private float rotation = 0;
 	int fireType = 0;
 	Sprite boxSprite;
+	int HEALTH = 20;
 
 	
 	private LinkedList<Bullet> bullets;
@@ -200,6 +201,10 @@ public class Player extends InputAdapter{
 	
 	public float getRotation(){
 		return rotation;
+	}
+	
+	public void decrementHealth(int dec){
+		HEALTH = HEALTH -  dec;
 	}
 	
 	public void setFireType(int fireType){

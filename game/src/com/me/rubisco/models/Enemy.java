@@ -3,6 +3,7 @@ package com.me.rubisco.models;
 
 import java.util.Stack;
 
+import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.math.Vector2;
 import com.badlogic.gdx.physics.box2d.Body;
 import com.badlogic.gdx.physics.box2d.BodyDef;
@@ -33,7 +34,7 @@ public class Enemy{
 		height = width;
 		
 		BodyDef bodyDef = new BodyDef();
-		bodyDef.type = BodyType.DynamicBody;
+		bodyDef.type = BodyType.KinematicBody;
 		bodyDef.position.set(x,y);
 		
 		PolygonShape shape = new PolygonShape();
@@ -63,8 +64,30 @@ public class Enemy{
 		body.setUserData(this);
 	}
 	
+	int waypoint = 1;
+	
 	public void update(){
-		body.setLinearVelocity(velocity);
+		if(!findPath){
+			while(!path.isEmpty()){
+				path.pop();
+			}
+		}
+		
+		if(path.size() > 1 && findPath){
+			waypoint = path.size()-2;
+			Vector2 coord = path.get(waypoint);
+			int speed = 5;
+			float angle = (float) Math.atan2(coord.y - body.getPosition().y, coord.x - body.getPosition().x);
+			velocity.set((float) Math.cos(angle) * speed, (float) Math.sin(angle) * speed);
+			
+			Vector2 blah = new Vector2(body.getPosition().x + velocity.x  * Gdx.graphics.getDeltaTime(), body.getPosition().y + velocity.y  * Gdx.graphics.getDeltaTime());
+			
+			body.setTransform(blah, 0);
+			
+			if(isWaypointReached()){
+					waypoint--;
+			}
+		}
 	}
 	
 	public void findPath(Vector2 target, int[][] map){
@@ -80,7 +103,8 @@ public class Enemy{
 	}
 	
 	public Stack<Vector2> getPath(){
-		return path;
+		Stack<Vector2> derp = (Stack<Vector2>) path.clone();
+		return derp;
 	}
 	
 	public Body getBody(){
@@ -97,6 +121,14 @@ public class Enemy{
 	
 	public int getHealth(){
 		return HEALTH;
+	}
+	
+	public void decrementHealth(int dec){
+		HEALTH = HEALTH - dec;
+	}
+	
+	public boolean isWaypointReached(){
+		return path.get(waypoint).x - body.getPosition().x  >= 0.1 && path.get(waypoint).y - body.getPosition().y >= 0.1;
 	}
 	
 	public void setHealth(int health){
