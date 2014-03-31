@@ -3,6 +3,8 @@ package com.me.rubisco.screens;
 import java.util.LinkedList;
 import java.util.Stack;
 
+import net.dermetfan.utils.libgdx.graphics.AnimatedBox2DSprite;
+
 import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.Input.Keys;
 import com.badlogic.gdx.InputAdapter;
@@ -13,6 +15,7 @@ import com.badlogic.gdx.graphics.GL20;
 import com.badlogic.gdx.graphics.OrthographicCamera;
 import com.badlogic.gdx.graphics.g2d.Sprite;
 import com.badlogic.gdx.graphics.g2d.SpriteBatch;
+import com.badlogic.gdx.graphics.g2d.TextureRegion;
 import com.badlogic.gdx.graphics.glutils.ShapeRenderer;
 import com.badlogic.gdx.graphics.glutils.ShapeRenderer.ShapeType;
 import com.badlogic.gdx.maps.tiled.TiledMap;
@@ -27,12 +30,12 @@ import com.badlogic.gdx.physics.box2d.Box2DDebugRenderer;
 import com.badlogic.gdx.physics.box2d.ChainShape;
 import com.badlogic.gdx.physics.box2d.Fixture;
 import com.badlogic.gdx.physics.box2d.FixtureDef;
-import com.badlogic.gdx.physics.box2d.PolygonShape;
 import com.badlogic.gdx.physics.box2d.World;
 import com.badlogic.gdx.utils.Array;
 import com.me.rubisco.datacrap.MyContactListener;
 import com.me.rubisco.models.Bullet;
 import com.me.rubisco.models.Enemy;
+import com.me.rubisco.models.Gun;
 import com.me.rubisco.models.Player;
 import com.me.rubisco.models.Wall;
 
@@ -50,6 +53,7 @@ public class Play implements Screen {
 	private Player player;
 	private LinkedList<Enemy> enemies;
 	public LinkedList<Bullet> bullets;
+	public LinkedList<Gun> guns;
 	
 	private ShapeRenderer sr;
 	
@@ -71,34 +75,44 @@ public class Play implements Screen {
 		//-----
 		player.update();//Update our entities
 		
-		Enemy[] tempEnemies = enemies.toArray(new Enemy[enemies.size()]);
+		Enemy[] tempEnemies = enemies.toArray(new Enemy[enemies.size()]); //Working with linked lists can get a little wonky
+		//So we just cast it to an array and everything goes smoothly
 		
-		for(Enemy e: enemies){
+		//For every enemy in the world
+		for(Enemy e: tempEnemies){
 			e.update();
+			//Get their bullets and add them to the total array
+			//bullets.addAll(e.getBullets());
+			
+			//Remove them if they are dead
 			if(e.getHealth() < 1){
+				addRandomEnemy();
 				enemies.remove(e);
 				world.destroyBody(e.getBody());
 			}
 		}
 		
-		if(Gdx.input.isKeyPressed(Keys.NUM_1)){
-			player.setFireType(1);
-		}else if(Gdx.input.isKeyPressed(Keys.NUM_2)){
-			player.setFireType(2);
-		}else if(Gdx.input.isKeyPressed(Keys.NUM_0)){
-			player.setFireType(0);
-		}else if(Gdx.input.isKeyPressed(Keys.NUM_3)){
-			player.setFireType(3);
-		}
-		
+		//Add the players bullets to the screen
 		bullets = player.getBullets();
 		
+		//Cast all the bullets in the world
 		Bullet[] tempBullets = bullets.toArray(new Bullet[bullets.size()]);
 		for(Bullet b: tempBullets){
 			b.update();
+			//If it is called to be destroyed, we destroy it
 			if(b.getDestroy() == true){
 				bullets.remove(b);
 				world.destroyBody(b.getBody());
+			}
+		}
+		
+		//Cast the guns
+		Gun[] tempGuns = guns.toArray(new Gun[guns.size()]);
+		for(Gun g: tempGuns){
+			//If we run over the guns, we destroy it
+			if(g.getDestory() == true){
+				guns.remove(g);
+				world.destroyBody(g.getBody());
 			}
 		}
 		//-----
@@ -115,18 +129,36 @@ public class Play implements Screen {
 		worldCamera.update();//Update our cameras 
 		tileCamera.update();
 		
+		//Find a path to the player if we are in the radius
 		for(Enemy e: enemies){
 			findPath2(e);
 			printPath(e);
+			e.setPlayerPos(player.getBody().getPosition());
 		}
 		
+		//Set up the projection for drawing sprites
 		batch.setProjectionMatrix(worldCamera.combined);
 		batch.begin();
 		world.getBodies(tmpBodies);
+		//For every body in the world
 		for(Body body: tmpBodies){
+			//Grab it's fixtures, which hold the sprites
 			Array<Fixture> fixList = body.getFixtureList();
 			for(Fixture fixture: fixList){
-				if(fixture.getUserData() instanceof Sprite){
+				//If it is an animation
+				if(fixture.getUserData() instanceof AnimatedBox2DSprite){
+					AnimatedBox2DSprite sprite = (AnimatedBox2DSprite) fixture.getUserData();
+					
+					//Make it go with the rotation of the object
+					if(body.getUserData() instanceof Player){
+						Player p = (Player) body.getUserData();
+						sprite.setRotation(p.getRotation());
+					}
+					
+					//Draw it
+					sprite.draw(batch, body.getFixtureList().first());
+					
+				}else if(fixture.getUserData() instanceof Sprite){
 					Sprite sprite = (Sprite) fixture.getUserData();
 					sprite.setPosition(fixture.getBody().getPosition().x-sprite.getWidth()/2, fixture.getBody().getPosition().y-sprite.getWidth()/2);
 					
@@ -134,9 +166,11 @@ public class Play implements Screen {
 						Player p = (Player) body.getUserData();
 						sprite.setRotation(p.getRotation());
 					}
-					
 					sprite.draw(batch);
 				}
+				
+				
+				
 			}
 		}
 		
@@ -146,13 +180,14 @@ public class Play implements Screen {
 	}
 	
 	public void findPath2(Enemy e){
-		e.findPath(player.getBody().getPosition(), arrMap);
+		e.findPath(player.getBody().getPosition(), arrMap);//Find the path to the player
 	}
 	
+	//This draws the path
 	public void printPath(Enemy e){
-		Stack<Vector2> path = e.getPath();
+		Stack<Vector2> path = e.getPath();//Get a copy of the path
 		
-		if(!path.isEmpty()){
+		if(!path.isEmpty()){//If it is not empty, we draw lines going to the various points
 			Vector2 previous = path.pop();
 			while(!path.isEmpty()){
 				Vector2 current = path.pop();
@@ -190,7 +225,7 @@ public class Play implements Screen {
 		
 		world = new World(new Vector2(0, 0), true); //Create a new World
 		
-		MyContactListener list = new MyContactListener();
+		MyContactListener list = new MyContactListener();//Sets up the collision detection
 		world.setContactListener(list);
 		
 		debugRenderer = new Box2DDebugRenderer(); //Init our debug renderer
@@ -200,7 +235,7 @@ public class Play implements Screen {
 		worldCamera = new OrthographicCamera(); //Init our cameras
 		tileCamera = new OrthographicCamera();
 		
-		map = new TmxMapLoader().load("maps/TestMap.tmx");//Load our map
+		map = new TmxMapLoader().load("maps/NoSnow.tmx");//Load our map
 		
 		tileRenderer = new OrthogonalTiledMapRenderer(map, 1/32f);//Init our tile renderer to the map, and then scale it down 1/32
 		
@@ -208,14 +243,18 @@ public class Play implements Screen {
 		
 		//--------------------
 		
+		//Inits the various arrays
 		enemies = new LinkedList<Enemy>();
 		bullets = new LinkedList<Bullet>();
+		guns = new LinkedList<Gun>();
 		
-		enemies.add(new Enemy(world, 5, 5, .5f));
+		//Init the things in the world
+		
+		enemies.add(new Enemy(world, 6, 6, .5f));
 
-		
-		
-		player = new Player(world, 10f, 3f, .5f); //Init objects
+		guns.add(new Gun(world, 10, 10, "shotty"));
+
+		player = new Player(world, 10f, 3f, .5f);
 
 		
 		Gdx.input.setInputProcessor(new InputMultiplexer(new InputAdapter(){ //Combine the inputs of all our items
@@ -232,9 +271,10 @@ public class Play implements Screen {
 			}
 			
 			@Override
-			public boolean scrolled(int amount){
+			public boolean scrolled(int amount){//Using the scroll wheel
 				//worldCamera.zoom += amount/10f;
 				//tileCamera.zoom += amount/10f;
+				//Used through scrolling through various weapon types
 				y+=amount;
 				if(y > 3)
 					y = 0;
@@ -242,8 +282,7 @@ public class Play implements Screen {
 				if(y < 0)
 					y = 3;
 				
-				player.setFireType(y);
-				//System.out.println(y);
+				player.setFireType(y);//Sets the player wepon type
 				return true;
 			}
 			
@@ -254,6 +293,7 @@ public class Play implements Screen {
 		
 	}
 	
+	//This adds all the static obstacles. 
 	public void addObstacles(){
 		TiledMapTileLayer collisionLayer = (TiledMapTileLayer) map.getLayers().get(1); //Get collision layer
 		
@@ -270,9 +310,8 @@ public class Play implements Screen {
 					arrMap[x][y] = collisionLayer.getCell(x, y).getTile().getId(); //Try to get it
 
 					//Create a new static body at the tile place
-					//**Could init defs outside of loop to save some mem***
 					
-					
+					//Create the wall at the selected place
 					Wall wall = new Wall(world, x, y, .5f);
 					
 					}catch(NullPointerException e){
@@ -302,6 +341,20 @@ public class Play implements Screen {
 		groundShape.dispose();
 		
 	}
+	
+	//Adds a random enemy in the world
+	public void addRandomEnemy(){
+		int x = (int)(Math.random()*arrMap.length);
+		int y = (int)(Math.random()*arrMap[0].length);
+		
+		while(arrMap[x][y] != 0){
+			x = (int)(Math.random()*arrMap.length);
+			y = (int)(Math.random()*arrMap[0].length);
+		}
+		
+		enemies.add(new Enemy(world, x, y, .5f));
+
+	}
 
 	@Override
 	public void hide() {
@@ -318,6 +371,7 @@ public class Play implements Screen {
 		
 	}
 
+	//Gets rid of everything we don't need
 	@Override
 	public void dispose() {
 		world.dispose();

@@ -24,23 +24,6 @@ public class Pathfinder {
 		
 		this.map = arr;
 		
-		
-//		arr = new int[][]{
-//				  { 0, 1, 0, 0, 0, 0, 0, 0, 0, 0 },
-//				  { 0, 1, 0, 0, 0, 0, 0, 0, 0, 0 },
-//				  { 0, 1, 0, 0, 0, 0, 0, 0, 0, 0 },
-//				  { 0, 1, 0, 1, 1, 1, 0, 0, 0, 0 },
-//				  { 0, 1, 0, 1, 0, 1, 0, 0, 0, 0 },
-//				  { 0, 1, 0, 1, 0, 1, 0, 0, 0, 0 },
-//				  { 0, 1, 1, 1, 0, 1, 0, 0, 0, 0 },
-//				  { 0, 0, 0, 0, 0, 1, 0, 0, 0, 0 },
-//				  { 0, 1, 1, 1, 1, 1, 0, 0, 0, 0 },
-//				  { 0, 1, 0, 0, 0, 0, 0, 0, 0, 0 }
-//			};
-		
-		
-		
-		
 		while(!openList.isEmpty()){
 			if(openList.peek().getPosition().equals(end)){
 				break;
@@ -79,10 +62,6 @@ public class Pathfinder {
 			pathNode.add(toPath);
 			toPath = toPath.getParent();
 		}
-		
-		//pathNode.add(start);
-		
-		//Collections.reverse(pathNode);
 		
 		Stack<Vector2> path = new Stack<Vector2>();
 		

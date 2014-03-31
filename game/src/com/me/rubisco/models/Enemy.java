@@ -1,6 +1,7 @@
 package com.me.rubisco.models;
 
 
+import java.util.LinkedList;
 import java.util.Stack;
 
 import com.badlogic.gdx.Gdx;
@@ -27,11 +28,18 @@ public class Enemy{
 	int HEALTH = 20;
 	boolean findPath = false;
 	
+	World world;
+	
 	Stack<Vector2> path;
+	Vector2 playerPos;
+	
+	private LinkedList<Bullet> bullets;
 	
 	public Enemy(World world, float x, float y, float width){
 		this.width = width;
 		height = width;
+		
+		this.world = world;
 		
 		BodyDef bodyDef = new BodyDef();
 		bodyDef.type = BodyType.KinematicBody;
@@ -62,6 +70,8 @@ public class Enemy{
 		
 		path = new Stack<Vector2>();
 		body.setUserData(this);
+		
+		playerPos = new Vector2();
 	}
 	
 	int waypoint = 1;
@@ -72,6 +82,11 @@ public class Enemy{
 				path.pop();
 			}
 		}
+		
+		Vector2 meh = new Vector2(body.getPosition().x - playerPos.x, body.getPosition().y - playerPos.y);
+		meh.nor();
+		meh.x = -meh.x;
+		meh.y = -meh.y;
 		
 		if(path.size() > 1 && findPath){
 			waypoint = path.size()-2;
@@ -88,6 +103,7 @@ public class Enemy{
 					waypoint--;
 			}
 		}
+		
 	}
 	
 	public void findPath(Vector2 target, int[][] map){
@@ -133,6 +149,14 @@ public class Enemy{
 	
 	public void setHealth(int health){
 		HEALTH = health;
+	}
+	
+	public void setPlayerPos(Vector2 playerPos){
+		this.playerPos = playerPos;
+	}
+	
+	public LinkedList<Bullet> getBullets(){
+		return bullets;
 	}
 	
 }

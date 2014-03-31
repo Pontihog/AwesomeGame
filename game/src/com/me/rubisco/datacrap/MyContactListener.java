@@ -6,6 +6,7 @@ import com.badlogic.gdx.physics.box2d.ContactListener;
 import com.badlogic.gdx.physics.box2d.Manifold;
 import com.me.rubisco.models.Bullet;
 import com.me.rubisco.models.Enemy;
+import com.me.rubisco.models.Gun;
 import com.me.rubisco.models.Player;
 
 public class MyContactListener implements ContactListener {
@@ -31,6 +32,15 @@ public class MyContactListener implements ContactListener {
 			if(contactA instanceof Enemy){
 				((Enemy) contactA).decrementHealth(((Bullet) contactB).getDamage());
 			}
+		}
+		
+		
+		if(contactA instanceof Gun && contactB instanceof Player){
+			Gun gun = (Gun) contactA;
+			Player player = (Player) contactB;
+			
+			player.giveAmmo(5, gun.getGunType());
+			gun.setDestroy(true);
 		}
 	}
 
