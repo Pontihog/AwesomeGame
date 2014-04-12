@@ -9,7 +9,6 @@ import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.Input.Buttons;
 import com.badlogic.gdx.Input.Keys;
 import com.badlogic.gdx.InputAdapter;
-import com.badlogic.gdx.graphics.Texture;
 import com.badlogic.gdx.graphics.g2d.Animation;
 import com.badlogic.gdx.graphics.g2d.Sprite;
 import com.badlogic.gdx.math.Vector2;
@@ -20,6 +19,7 @@ import com.badlogic.gdx.physics.box2d.Fixture;
 import com.badlogic.gdx.physics.box2d.FixtureDef;
 import com.badlogic.gdx.physics.box2d.PolygonShape;
 import com.badlogic.gdx.physics.box2d.World;
+import com.me.rubisco.GameAudio;
 import com.me.rubisco.datacrap.Animator;
 public class Player extends InputAdapter{
 		
@@ -32,11 +32,13 @@ public class Player extends InputAdapter{
 	private float rotation = 0;
 	int fireType = 0;
 	Sprite boxSprite;
-	int HEALTH = 20;
+	int HEALTH = 50;
 	
-	int PISTOL_AMMO = 0;
-	int MACHINE_AMMO = 0;
-	int SHOTTY_AMMO = 0;
+	GameAudio audio = new GameAudio();
+	
+	int PISTOL_AMMO = 128;
+	int MACHINE_AMMO = 500;
+	int SHOTTY_AMMO = 50;
 
 	final int PISTOL = 1;
 	final int MACHINE = 2;
@@ -85,8 +87,8 @@ public class Player extends InputAdapter{
 	//Set the sprite of the player
 	public AnimatedBox2DSprite setSprite(String filename, int rows, int cols, boolean looping){
 		Animation walking = animator.getAnimation(filename, rows, cols, looping);
-		AnimatedSprite nignog = new AnimatedSprite(walking);
-		currentAnimation = new AnimatedBox2DSprite(nignog);
+		AnimatedSprite animatedSprite = new AnimatedSprite(walking);
+		currentAnimation = new AnimatedBox2DSprite(animatedSprite);
 		currentAnimation.setSize(2, 2);
 		currentAnimation.setOrigin(currentAnimation.getWidth()/2, currentAnimation.getHeight()/2);
 		fixture.setUserData(currentAnimation);
@@ -117,22 +119,27 @@ public class Player extends InputAdapter{
 		if(startFire == true){
 			switch(fireType){
 			case PISTOL:
-				if(countTime % 50 == 0){
+				if(countTime % 50 == 0 && PISTOL_AMMO > 0){
 					//Set the sprite to a gun
 					setSprite("mao_2", 1, 5, false);
 					//Add a new bullet
-					bullets.add(new Bullet(world, body.getPosition().x+unitVect.x, body.getPosition().y+unitVect.y, unitVect));
+					bullets.add(new Bullet(world, body.getPosition().x+unitVect.x, body.getPosition().y+unitVect.y, unitVect, rotation-180));
+					audio.shot();
+					PISTOL_AMMO--;
 				}
 				countTime = countTime+2;
 				break;
 			case MACHINE:
-				if(countTime % 10 == 0){
-					bullets.add(new Bullet(world, body.getPosition().x+unitVect.x, body.getPosition().y+unitVect.y, unitVect));
+				if(countTime % 10 == 0 && MACHINE_AMMO > 0){
+					setSprite("uzi_dual", 1, 3, false);
+					bullets.add(new Bullet(world, body.getPosition().x+unitVect.x, body.getPosition().y+unitVect.y, unitVect, rotation-180));
+					MACHINE_AMMO--;
 				}
 				countTime = countTime+ 2;
 				break;
 			case SHOTTY:
 				if(countTime % 100 == 0 && SHOTTY_AMMO > 0){
+					setSprite("shotty_2", 1, 5, false);
 					Vector2 b1 = unitVect.cpy();
 					Vector2 b2 = unitVect.cpy();
 					Vector2 b3 = unitVect.cpy();
@@ -145,9 +152,10 @@ public class Player extends InputAdapter{
 					Vector2 b3s = b3.cpy().scl(1f);
 				
 				
-					bullets.add(new Bullet(world, body.getPosition().x+b1s.x, body.getPosition().y+b1s.y, b1));
-					bullets.add(new Bullet(world, body.getPosition().x+b2s.x, body.getPosition().y+b2s.y, b2));
-					bullets.add(new Bullet(world, body.getPosition().x+b3s.x, body.getPosition().y+b3s.y, b3));
+					bullets.add(new Bullet(world, body.getPosition().x+b1s.x, body.getPosition().y+b1s.y, b1, rotation-180));
+					bullets.add(new Bullet(world, body.getPosition().x+b2s.x, body.getPosition().y+b2s.y, b2, rotation-180));
+					bullets.add(new Bullet(world, body.getPosition().x+b3s.x, body.getPosition().y+b3s.y, b3, rotation-180));
+					audio.scatter();
 					SHOTTY_AMMO--;
 				}
 				countTime = countTime + 2;
@@ -161,11 +169,13 @@ public class Player extends InputAdapter{
 				setSprite("mao_2", 1, 5, false);
 				break;
 			case MACHINE:
-				
+				setSprite("uzi_dual", 1, 3, false);
 				break;
 			case SHOTTY:
-				setSprite("walking2fixed", 3, 4, true);
+				setSprite("shotty_2", 1, 5, false);
 				break;
+			case 0:
+				setSprite("walking2fixed", 3, 4, true);
 			}
 		}
 		
@@ -202,6 +212,10 @@ public class Player extends InputAdapter{
 	
 	public LinkedList<Bullet> getBullets(){
 		return bullets;
+	}
+	
+	public int getHealth(){
+		return HEALTH;
 	}
 	
 	//Move the player
@@ -269,5 +283,16 @@ public class Player extends InputAdapter{
 			SHOTTY_AMMO += amount;
 		}
 		
+	}
+	
+	public int getAmmo(){
+		if(fireType == PISTOL){
+			return PISTOL_AMMO;
+		}else if(fireType == MACHINE){
+			return MACHINE_AMMO;
+		}else if(fireType == SHOTTY){
+			return SHOTTY_AMMO;
+		}
+		return 0;
 	}
 }

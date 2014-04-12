@@ -4,13 +4,17 @@ import com.badlogic.gdx.physics.box2d.Contact;
 import com.badlogic.gdx.physics.box2d.ContactImpulse;
 import com.badlogic.gdx.physics.box2d.ContactListener;
 import com.badlogic.gdx.physics.box2d.Manifold;
+import com.me.rubisco.GameAudio;
 import com.me.rubisco.models.Bullet;
 import com.me.rubisco.models.Enemy;
 import com.me.rubisco.models.Gun;
 import com.me.rubisco.models.Player;
 
+
 public class MyContactListener implements ContactListener {
 
+	GameAudio audio = new GameAudio();
+	
 	@Override
 	public void beginContact(Contact contact) {
 		Object contactA = contact.getFixtureA().getBody().getUserData();
@@ -19,6 +23,12 @@ public class MyContactListener implements ContactListener {
 		if(contactA instanceof Player && contactB instanceof Enemy){
 			Enemy enemy = (Enemy) contactB;
 			enemy.setFindPath(true);
+		}
+		
+		if(contactA instanceof Player && contactB instanceof Bullet){
+			Player player = (Player) contactA;
+			player.decrementHealth(1);
+			audio.hit();
 		}
 		
 		if(contactA instanceof Bullet && !contact.getFixtureB().isSensor()){
@@ -31,6 +41,7 @@ public class MyContactListener implements ContactListener {
 			
 			if(contactA instanceof Enemy){
 				((Enemy) contactA).decrementHealth(((Bullet) contactB).getDamage());
+				audio.breakit();
 			}
 		}
 		
@@ -39,8 +50,18 @@ public class MyContactListener implements ContactListener {
 			Gun gun = (Gun) contactA;
 			Player player = (Player) contactB;
 			
-			player.giveAmmo(5, gun.getGunType());
+			player.giveAmmo(gun.getAmmo(), gun.getGunType());
 			gun.setDestroy(true);
+			audio.reload();
+		}
+		
+		if(contactB instanceof Gun && contactA instanceof Player){
+			Gun gun = (Gun) contactB;
+			Player player = (Player) contactA;
+			
+			player.giveAmmo(gun.getAmmo(), gun.getGunType());
+			gun.setDestroy(true);
+			audio.reload();
 		}
 	}
 

@@ -4,7 +4,11 @@ package com.me.rubisco.models;
 import java.util.LinkedList;
 import java.util.Stack;
 
+import net.dermetfan.utils.libgdx.graphics.AnimatedBox2DSprite;
+import net.dermetfan.utils.libgdx.graphics.AnimatedSprite;
+
 import com.badlogic.gdx.Gdx;
+import com.badlogic.gdx.graphics.g2d.Animation;
 import com.badlogic.gdx.math.Vector2;
 import com.badlogic.gdx.physics.box2d.Body;
 import com.badlogic.gdx.physics.box2d.BodyDef;
@@ -14,6 +18,8 @@ import com.badlogic.gdx.physics.box2d.Fixture;
 import com.badlogic.gdx.physics.box2d.FixtureDef;
 import com.badlogic.gdx.physics.box2d.PolygonShape;
 import com.badlogic.gdx.physics.box2d.World;
+import com.me.rubisco.GameAudio;
+import com.me.rubisco.datacrap.Animator;
 import com.me.rubisco.pathfinding.Pathfinder;
 
 public class Enemy{
@@ -25,8 +31,10 @@ public class Enemy{
 	private final float width, height;
 	private Vector2 velocity = new Vector2();
 	private float movementForce = 10;
-	int HEALTH = 20;
+	int HEALTH;
 	boolean findPath = false;
+	GameAudio audio = new GameAudio();
+	float rotation;
 	
 	World world;
 	
@@ -35,9 +43,10 @@ public class Enemy{
 	
 	private LinkedList<Bullet> bullets;
 	
-	public Enemy(World world, float x, float y, float width){
+	public Enemy(World world, float x, float y, float width, int HEALTH){
 		this.width = width;
 		height = width;
+		this.HEALTH = HEALTH;
 		
 		this.world = world;
 		
@@ -54,6 +63,7 @@ public class Enemy{
 		fixtureDef.friction = 0;
 		fixtureDef.density = 0;
 		
+		rotation = 0;
 		
 		body = world.createBody(bodyDef);
 		
@@ -65,6 +75,15 @@ public class Enemy{
 		fixtureDef.shape = circle;
 		fixtureDef.isSensor = true;
 		
+		bullets = new LinkedList<Bullet>();
+		
+		Animator animator = new Animator();
+		Animation enemy = animator.getAnimation("catrobot", 3, 3, true);
+		AnimatedSprite animatedSprite = new AnimatedSprite(enemy);
+		AnimatedBox2DSprite b2dSprite = new AnimatedBox2DSprite(animatedSprite);
+		b2dSprite.setSize(5,5);
+		b2dSprite.setOrigin(b2dSprite.getWidth()/2, b2dSprite.getHeight()/2);
+		fixture.setUserData(b2dSprite);
 		
 		sensor = body.createFixture(fixtureDef);
 		
@@ -75,6 +94,9 @@ public class Enemy{
 	}
 	
 	int waypoint = 1;
+	boolean startFire;
+	float fireTime;
+	int countTime = 100;
 	
 	public void update(){
 		if(!findPath){
@@ -83,10 +105,30 @@ public class Enemy{
 			}
 		}
 		
-		Vector2 meh = new Vector2(body.getPosition().x - playerPos.x, body.getPosition().y - playerPos.y);
-		meh.nor();
-		meh.x = -meh.x;
-		meh.y = -meh.y;
+		Vector2 rotationVector = new Vector2(body.getPosition().x - playerPos.x, body.getPosition().y - playerPos.y);
+		rotationVector.nor();
+		rotationVector.x = -rotationVector.x;
+		rotationVector.y = -rotationVector.y;
+		
+		rotation = rotationVector.angle()+90;
+
+		
+		
+		if(findPath){
+			startFire = true;
+		}else{
+			startFire = false;
+			countTime = 100;
+		}
+		
+		
+		if(startFire){
+			if(countTime % 50 == 0){
+				bullets.add(new Bullet(world, body.getPosition().x+rotationVector.x, body.getPosition().y+rotationVector.y, rotationVector, rotation));
+				audio.laser();
+			}
+			countTime = countTime+2;
+		}
 		
 		if(path.size() > 1 && findPath){
 			waypoint = path.size()-2;
@@ -108,7 +150,6 @@ public class Enemy{
 	
 	public void findPath(Vector2 target, int[][] map){
 		Pathfinder pathfinder = new Pathfinder();
-		//System.out.println(findPath);
 		if(findPath){
 			path = pathfinder.findPath(body.getPosition(), target, map);
 		}
@@ -121,6 +162,10 @@ public class Enemy{
 	public Stack<Vector2> getPath(){
 		Stack<Vector2> derp = (Stack<Vector2>) path.clone();
 		return derp;
+	}
+	
+	public float getRotation(){
+		return rotation;
 	}
 	
 	public Body getBody(){

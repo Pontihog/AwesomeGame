@@ -13,9 +13,9 @@ import com.badlogic.gdx.Screen;
 import com.badlogic.gdx.graphics.Color;
 import com.badlogic.gdx.graphics.GL20;
 import com.badlogic.gdx.graphics.OrthographicCamera;
+import com.badlogic.gdx.graphics.g2d.BitmapFont;
 import com.badlogic.gdx.graphics.g2d.Sprite;
 import com.badlogic.gdx.graphics.g2d.SpriteBatch;
-import com.badlogic.gdx.graphics.g2d.TextureRegion;
 import com.badlogic.gdx.graphics.glutils.ShapeRenderer;
 import com.badlogic.gdx.graphics.glutils.ShapeRenderer.ShapeType;
 import com.badlogic.gdx.maps.tiled.TiledMap;
@@ -32,6 +32,7 @@ import com.badlogic.gdx.physics.box2d.Fixture;
 import com.badlogic.gdx.physics.box2d.FixtureDef;
 import com.badlogic.gdx.physics.box2d.World;
 import com.badlogic.gdx.utils.Array;
+import com.me.rubisco.MyGdxGame;
 import com.me.rubisco.datacrap.MyContactListener;
 import com.me.rubisco.models.Bullet;
 import com.me.rubisco.models.Enemy;
@@ -44,8 +45,10 @@ public class Play implements Screen {
 	private World world;
 	private Box2DDebugRenderer debugRenderer;
 	private OrthographicCamera worldCamera, tileCamera;
+	private MyGdxGame myGame;
 
 	private SpriteBatch batch;
+	private SpriteBatch HUDBatch = new SpriteBatch();
 	
 	private final float TIMESTEP = 1/60f;
 	private final int VELOCITY_ITERATIONS = 8, POSITION_ITERATIONS = 3;
@@ -53,6 +56,7 @@ public class Play implements Screen {
 	private Player player;
 	private LinkedList<Enemy> enemies;
 	public LinkedList<Bullet> bullets;
+	public LinkedList<Bullet> enemyBullets;
 	public LinkedList<Gun> guns;
 	
 	private ShapeRenderer sr;
@@ -63,14 +67,37 @@ public class Play implements Screen {
 	
 	private Array<Body> tmpBodies = new Array<Body>();
 	
+	private int ENEMY_HEALTH = 20;
 	
+	BitmapFont font = new BitmapFont(Gdx.files.internal("font/white.fnt"), Gdx.files.internal("font/white_0.png"), false);
+	
+	
+	public Play(MyGdxGame myGame){
+		this.myGame = myGame;
+	}
 	
 	@Override //This method is called continuously
 	public void render(float delta) {
+		if(player.getHealth() > 0){
+
 		Gdx.gl.glClearColor(0, 0, 0, 1); //Clear the screen for another round of render
 		Gdx.gl.glClear(GL20.GL_COLOR_BUFFER_BIT);
 		
 		world.step(TIMESTEP, VELOCITY_ITERATIONS, POSITION_ITERATIONS);//Step though the physics sim
+		
+		
+
+		worldCamera.position.set(player.getBody().getPosition().x,player.getBody().getPosition().y, 0);//Set the camera's position to the player
+		tileCamera.position.set(player.getBody().getPosition().x+.5f,player.getBody().getPosition().y+.5f, 0);//We shift this over to compensate the orgin offset
+		
+		tileRenderer.setView(tileCamera);//Set the tiled renderer's view to the tile camera
+		tileRenderer.render(); //Render our tiled map
+		
+		debugRenderer.render(world, worldCamera.combined);//Render our debug outline
+		
+		worldCamera.update();//Update our cameras 
+		tileCamera.update();
+		
 		
 		//-----
 		player.update();//Update our entities
@@ -78,20 +105,34 @@ public class Play implements Screen {
 		Enemy[] tempEnemies = enemies.toArray(new Enemy[enemies.size()]); //Working with linked lists can get a little wonky
 		//So we just cast it to an array and everything goes smoothly
 		
+		font.setScale(.2f);
+		HUDBatch.begin();
+		font.draw(HUDBatch, "Health:" + (int)player.getHealth(), Gdx.graphics.getWidth()-190,Gdx.graphics.getHeight());
+		font.draw(HUDBatch, "Ammo: "+player.getAmmo(), Gdx.graphics.getWidth() - 160, Gdx.graphics.getHeight()-(Gdx.graphics.getHeight())+30);
+		HUDBatch.end();
+		
 		//For every enemy in the world
 		for(Enemy e: tempEnemies){
+			
 			e.update();
+			Bullet[] tempEBullets = e.getBullets().toArray(new Bullet[e.getBullets().size()]);
 			//Get their bullets and add them to the total array
-			//bullets.addAll(e.getBullets());
+			for(Bullet b: tempEBullets){
+				b.update();
+				if(b.getDestroy() == true){
+					e.getBullets().remove(b);
+					world.destroyBody(b.getBody());
+				}
+			}
 			
 			//Remove them if they are dead
 			if(e.getHealth() < 1){
+				addRandomGun(e);
 				addRandomEnemy();
 				enemies.remove(e);
 				world.destroyBody(e.getBody());
 			}
 		}
-		
 		//Add the players bullets to the screen
 		bullets = player.getBullets();
 		
@@ -118,16 +159,6 @@ public class Play implements Screen {
 		//-----
 		
 		
-		worldCamera.position.set(player.getBody().getPosition().x,player.getBody().getPosition().y, 0);//Set the camera's position to the player
-		tileCamera.position.set(player.getBody().getPosition().x+.5f,player.getBody().getPosition().y+.5f, 0);//We shift this over to compensate the orgin offset
-		
-		tileRenderer.setView(tileCamera);//Set the tiled renderer's view to the tile camera
-		tileRenderer.render(); //Render our tiled map
-		
-		debugRenderer.render(world, worldCamera.combined);//Render our debug outline
-		
-		worldCamera.update();//Update our cameras 
-		tileCamera.update();
 		
 		//Find a path to the player if we are in the radius
 		for(Enemy e: enemies){
@@ -155,6 +186,12 @@ public class Play implements Screen {
 						sprite.setRotation(p.getRotation());
 					}
 					
+					if(body.getUserData() instanceof Enemy){
+						Enemy e = (Enemy) body.getUserData();
+						sprite.setRotation(e.getRotation());
+
+					}
+					
 					//Draw it
 					sprite.draw(batch, body.getFixtureList().first());
 					
@@ -166,6 +203,12 @@ public class Play implements Screen {
 						Player p = (Player) body.getUserData();
 						sprite.setRotation(p.getRotation());
 					}
+					
+					if(body.getUserData() instanceof Bullet){
+						Bullet b = (Bullet) body.getUserData();
+						sprite.setRotation(b.getRotation());
+					}
+					
 					sprite.draw(batch);
 				}
 				
@@ -177,6 +220,44 @@ public class Play implements Screen {
 		batch.end();
 		
 		//findPath2(enemy);//Find a path
+		}else{
+			
+			Gdx.gl.glClearColor(0, 0, 0, 1); //Clear the screen for another round of render
+			Gdx.gl.glClear(GL20.GL_COLOR_BUFFER_BIT);
+			
+			font.setColor(Color.RED);
+			font.setScale(.5f);
+			
+			
+			
+			
+			HUDBatch.begin();
+			
+			
+			font.draw(HUDBatch, "YOU DIED", Gdx.graphics.getWidth()/2-150, Gdx.graphics.getHeight()/2+50);
+			font.setScale(.2f);
+			font.draw(HUDBatch, "Space to Try Again", Gdx.graphics.getWidth()/2-150, Gdx.graphics.getHeight()/2-30);
+
+			if(Gdx.input.isKeyPressed(Keys.SPACE)){
+				myGame.setScreen(new Play(myGame));
+			}
+			HUDBatch.end();
+		}
+	}
+	
+	public void addRandomGun(Enemy e){
+		int num = (int)(Math.random()*3)+1;
+		String gunName = "";
+				
+		if(num == 1){
+			gunName = "shotty";
+		}else if(num == 2){
+			gunName = "uzi";
+		}else if(num == 3){
+			gunName = "pistol";
+		}
+		
+		guns.add(new Gun(world, (int)e.getBody().getPosition().x, (int)e.getBody().getPosition().y, gunName));
 	}
 	
 	public void findPath2(Enemy e){
@@ -250,11 +331,13 @@ public class Play implements Screen {
 		
 		//Init the things in the world
 		
-		enemies.add(new Enemy(world, 6, 6, .5f));
+		addRandomEnemy();
+		addRandomEnemy();
 
-		guns.add(new Gun(world, 10, 10, "shotty"));
 
-		player = new Player(world, 10f, 3f, .5f);
+		int x = (int)(Math.random()*(arrMap.length-3));
+		int y = (int)(Math.random()*(arrMap[0].length-3));
+		player = new Player(world,x, y, .5f);
 
 		
 		Gdx.input.setInputProcessor(new InputMultiplexer(new InputAdapter(){ //Combine the inputs of all our items
@@ -300,7 +383,9 @@ public class Play implements Screen {
 		int height = collisionLayer.getHeight();
 		int width = collisionLayer.getWidth();
 		
+		
 		arrMap = new int[height][width];
+
 		
 		//--------------------
 		
@@ -347,12 +432,13 @@ public class Play implements Screen {
 		int x = (int)(Math.random()*arrMap.length);
 		int y = (int)(Math.random()*arrMap[0].length);
 		
+		
 		while(arrMap[x][y] != 0){
 			x = (int)(Math.random()*arrMap.length);
 			y = (int)(Math.random()*arrMap[0].length);
 		}
 		
-		enemies.add(new Enemy(world, x, y, .5f));
+		enemies.add(new Enemy(world, x, y, .5f, ENEMY_HEALTH));
 
 	}
 

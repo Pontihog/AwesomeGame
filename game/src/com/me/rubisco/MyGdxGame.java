@@ -14,7 +14,7 @@ public class MyGdxGame extends Game {
 	@Override
 	public void create() {	
 		log = new FPSLogger();
-		setScreen(new Play());
+		setScreen(new Play(this));
 	}
 
 	@Override
